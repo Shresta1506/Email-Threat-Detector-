@@ -1,0 +1,71 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>EMAIL TREAT DETECTION FOR HEALTHCARE SYSTEM</title>
+<link rel="stylesheet" href="/static/styles.css"><script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script></head>
+
+<body>
+  <div class="sidebar glass">
+    <h3>Menu</h3>
+    <a href="/">Home</a><br><br><a href="#history">History</a><br><br><br><br><a href="/logout" class="btn">Logout</a>
+  </div>
+  <div class="main">
+    <h1>Welcome, {{username}}</h1>
+    <div class="glass">
+      <h2>Analyze Email</h2>
+      <form id="email-form"><textarea id="email-content" placeholder="Paste email..." required></textarea><button type="submit">Analyze</button></form>
+    </div>
+    <div id="result-section" class="glass"><h2>Analysis Result</h2><div id="result"></div><button id="export-pdf">Export PDF</button><button id="export-csv">Export CSV</button></div>
+    <div id="history-section" class="glass"><h2 id="history">Scan History</h2><table><thead><tr><th>ID</th><th>Email Text</th><th>Threat Level</th><th>Threat %</th><th>Suspicious Keywords found</th><th>Timestamp</th></tr></thead><tbody id="history-body"></tbody></table></div>
+  </div>
+<script>
+const hist = JSON.parse(localStorage.getItem("emailScanHistory")) || [];
+const histBody = document.getElementById("history-body");
+const form = document.getElementById("email-form");
+const resultDiv = document.getElementById("result");
+
+function color(l){return l=="High"?"red":l=="Medium"?"orange":"green";}
+function render(){
+  histBody.innerHTML = "";
+ hist.forEach((h,i)=>{
+  histBody.innerHTML += `<tr>
+    <td>${h.id || i+1}</td>
+    <td>${h.email_text || "N/A"}</td>
+    <td style="color:${color(h.threat_level)}">${h.threat_level}</td>
+    <td>${h.threat_percentage}%</td>
+    <td>${h.suspicious_words.join(", ")}</td>
+    <td>${new Date(h.timestamp).toLocaleString()}</td>
+  </tr>`;
+});
+}
+
+form.onsubmit = async e=>{
+  e.preventDefault();
+  const content = document.getElementById("email-content").value;
+  const res = await fetch("/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:content})});
+  const data = await res.json();
+  resultDiv.innerHTML = `<p><b style="color:${color(data.threat_level)}">${data.threat_level}</b> (${data.threat_percentage}%)</p><p>${data.suspicious_words.join(", ")}</p><p>${data.message}</p>`;
+  hist.push({
+  ...data,
+  email_text: content,
+  id: hist.length + 1,
+  timestamp: Date.now()
+});
+  localStorage.setItem("emailScanHistory",JSON.stringify(hist));
+  render();
+};
+
+document.getElementById("export-pdf").onclick = ()=>{
+  const {jsPDF} = window.jspdf;
+  const doc = new jsPDF();
+  doc.text("Email Threat Report",10,10);
+  doc.text(resultDiv.innerText,10,20);
+  doc.save("report.pdf");
+};
+
+document.getElementById("export-csv").onclick = ()=>{
+  let csv="Level,%,Words,Time\n";
+  hist.forEach(h=>csv+=`${h.threat_level},${h.threat_percentage},"${h.suspicious_words.join(" ")}",${new Date(h.timestamp).toLocaleString()}\n`);
+  const blob=new Blob([csv],{type:"text/csv"}),u=URL.createObjectURL(blob),a=document.createElement("a");
+  a.href=u; a.download="history.csv";a.click();
+};
+
+render();
+</script></body></html>

@@ -1,0 +1,13 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Forgot Password</title><link rel="stylesheet" href="/static/styles.css"></head>
+<body style="display:flex;justify-content:center;align-items:center;height:100vh;background: #ede7f6;">
+<div class="glass" style="width:340px;text-align:center;">
+  <h2>Forgot Password</h2>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% for cat, msg in messages %}<div class="flash {{cat}}">{{msg}}</div>{% endfor %}{% endwith %}
+  <form method="POST">
+    <input name="username" placeholder="Enter username" required>
+    <button type="submit">Request Reset</button>
+  </form>
+  <p><a href="/login">Back to Login</a></p>
+</div></body></html>
